@@ -4,18 +4,73 @@ const downloadSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 64
         d="M352 96C352 78.3 337.7 64 320 64C302.3 64 288 78.3 288 96L288 306.7L246.6 265.3C234.1 252.8 213.8 252.8 201.3 265.3C188.8 277.8 188.8 298.1 201.3 310.6L297.3 406.6C309.8 419.1 330.1 419.1 342.6 406.6L438.6 310.6C451.1 298.1 451.1 277.8 438.6 265.3C426.1 252.8 405.8 252.8 393.3 265.3L352 306.7L352 96zM160 384C124.7 384 96 412.7 96 448L96 480C96 515.3 124.7 544 160 544L480 544C515.3 544 544 515.3 544 480L544 448C544 412.7 515.3 384 480 384L433.1 384L376.5 440.6C345.3 471.8 294.6 471.8 263.4 440.6L206.9 384L160 384zM464 440C477.3 440 488 450.7 488 464C488 477.3 477.3 488 464 488C450.7 488 440 477.3 440 464C440 450.7 450.7 440 464 440z" />
 </svg>`
 
-const showCardActions = document.querySelector(".project-show-card__actions")
-if (showCardActions && !document.getElementById("export_button_id")) {
+
+function createDialog() {
+    const dialog = document.createElement("dialog")
+    dialog.id = "project-export-devlogs-modal"
+    dialog.className = "modal"
+    dialog.dataset["controller"] = "modal"
+    
+    const title = document.createElement("h3")
+    title.className = "modal__title"
+    title.style = "border-radius: calc(var(--border-radius)*.6);"
+    title.textContent = "Export Devlogs"
+    const createModalButton = (content, onclick, style = null) => {
+        const button = document.createElement("button")
+        if (style) button.style = style
+        button.type = "button"
+        button.className = "modal__actions-close"
+        button.onclick = onclick
+        button.textContent = content
+        return button
+    }
+    const buttonContainer = document.createElement("div")
+    buttonContainer.style = "display: flex; flex-direction: column; grid-gap: 10px;"
+    buttonContainer.textContent = "Export all your devlogs!"
+    const bigButtonStyle = "font-size: 1.5rem;"
+    const exportMarkdownButton = createModalButton("Export Markdown", () => {
+        const json = generateJSON()
+        const md = generateMarkdown(json)
+        const filename = json.project.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        download(`${filename}_devlogs.md`, md)
+    })
+    const exportJSONButton = createModalButton("Export JSON", () => {
+        const json = generateJSON()
+        const filename = json.project.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        download(`${filename}_devlogs.json`, JSON.stringify(json))
+    })
+    const closeButton = createModalButton("Close", () => dialog.close())
+    const exitContainer = document.createElement("div");
+    exitContainer.className = "modal__actions";
+    
+    exitContainer.appendChild(exportJSONButton)
+    exitContainer.appendChild(exportMarkdownButton)
+    exitContainer.appendChild(closeButton)
+    dialog.appendChild(title)
+    dialog.appendChild(buttonContainer)
+    dialog.appendChild(exitContainer)
+    return dialog
+}
+
+function createExportButton(showDialog) {
     const exportButton = document.createElement("button")
     exportButton.type = "button"
-    exportButton.onclick = exportDevlogs
+    exportButton.onclick = showDialog
     exportButton.id = "export_button_id"
     exportButton.className = "btn btn--brown btn--borderless"
     exportButton.innerHTML = `${downloadSVG} Export Devlogs`
-    showCardActions.appendChild(exportButton)
+    return exportButton
 }
 
-function exportDevlogs() {
+const showCardActions = document.querySelector(".project-show-card__actions")
+if (showCardActions && !document.getElementById("export_button_id")) {
+    const dialog = createDialog()
+    const exportButton = createExportButton(() => dialog.showModal())
+    showCardActions.appendChild(exportButton)
+    showCardActions.appendChild(dialog)
+}
+
+function generateJSON() {
     const projectUrl = location.href
     const projectBanner = document.querySelector(".project-card__banner-image").src
     const projectName = document.querySelector(".project-show-card__title-text").textContent
@@ -58,7 +113,7 @@ function exportDevlogs() {
     })
 
 
-    const json = {
+    return {
         project: {
             name: projectName,
             banner: projectBanner,
@@ -77,14 +132,20 @@ function exportDevlogs() {
         },
         devlogs: devlogs
     }
-    const md = `
-![${projectName} banner](${projectBanner})
-# [${projectName}](${projectUrl}) [(Repository)](${projectRepository})
-Created by: [${projectAuthor}](${projectAuthorUrl})
+}
 
-${devlogCount} • ${timeSpent} • ${followers}
+function generateMarkdown(json) {
+    const proj = json.project
+    const author = proj.author
+    const devlogs = json.devlogs
+    return `
+![${proj.name} banner](${proj.banner})
+# [${proj.name}](${proj.flavortownUrl}) [(Repository)](${proj.repository})
+Created by: [${author.username}](${author.flavortownUrl})
 
-    ${projectDesc}
+${proj.stats.devlog_count} • ${proj.stats.time_spend} • ${proj.stats.followers}
+
+    ${proj.description}
 ---
 # Devlogs
 
@@ -101,6 +162,17 @@ ${devlog.attachments.map(attachment => `![${attachment.type} attachment](${attac
 ---
 `)}
 `
-    console.log(md)
-    console.log(json)
+}
+
+function download(filename, text) {
+    var element = document.createElement('a');
+    element.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(text);
+    element.download = filename
+
+    element.style.display = 'none';
+    document.body.appendChild(element);
+
+    element.click();
+
+    document.body.removeChild(element);
 }

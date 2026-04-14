@@ -1,0 +1,32 @@
+
+{
+    "project": {
+        "name": "string",
+        "banner": "url | path",
+        "flavortownUrl": "url",
+        "repository": "url",
+        "author": {
+            "username": "string",
+            "flavortownUrl": "url"
+        },
+        "description": "string",
+        "stats": {
+            "devlog_count": "X devlogs",
+            "time_spend": "Xh Xm Xs",
+            "followers": "X followers"
+        },
+    },
+    "devlogs": [
+        {
+            "body": "markdown text",
+            "time": "about X Y ago",
+            "duration": "Xh Xm logged",
+            "attachments": [
+                {
+                    "type": " 'img' | 'video' ",
+                    "src": "url | path"
+                }
+            ]
+        }
+    ]
+}
