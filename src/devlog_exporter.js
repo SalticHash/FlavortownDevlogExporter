@@ -17,6 +17,7 @@ if (showCardActions && !document.getElementById("export_button_id")) {
 
 function exportDevlogs() {
     const projectUrl = location.href
+    const projectBanner = document.querySelector(".project-card__banner-image").src
     const projectName = document.querySelector(".project-show-card__title-text").textContent
     const projectAuthorElement = document.querySelector(".project-show-card__byline > a")
     const projectAuthor = projectAuthorElement.textContent
@@ -57,13 +58,48 @@ function exportDevlogs() {
     })
 
 
-    console.log(`
-Name: ${projectName} (${projectUrl}),
-Github Repo: ${projectRepository}
-Author: ${projectAuthor} (${projectAuthorUrl})
-Devlog Count: ${devlogCount} Time Spent: ${timeSpent} Followers: ${followers}
-Description: ${projectDesc}
+    const json = {
+        project: {
+            name: projectName,
+            banner: projectBanner,
+            flavortownUrl: projectUrl,
+            repository: projectRepository,
+            author: {
+                username: projectAuthor,
+                flavortownUrl: projectAuthorUrl
+            },
+            description: projectDesc,
+            stats: {
+                devlog_count: devlogCount,
+                time_spend: timeSpent,
+                followers: followers
+            },
+        },
+        devlogs: devlogs
+    }
+    const md = `
+![${projectName} banner](${projectBanner})
+# [${projectName}](${projectUrl}) [(Repository)](${projectRepository})
+Created by: [${projectAuthor}](${projectAuthorUrl})
 
-Devlogs: ${JSON.stringify(devlogs)}
-    `)
+${devlogCount} • ${timeSpent} • ${followers}
+    ${projectDesc}
+---
+# Devlogs
+
+${devlogs.map(devlog => `
+${devlog.time} • ${devlog.duration}
+
+---
+
+${devlog.body}
+
+---
+
+${devlog.attachments.map(attachment => `![${attachment.type} attachment](${attachment.src})`)}
+---
+`)}
+`
+    console.log(md)
+    console.log(json)
 }
