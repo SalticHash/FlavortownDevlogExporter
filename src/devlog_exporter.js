@@ -83,6 +83,7 @@ function exportDevlogs() {
 Created by: [${projectAuthor}](${projectAuthorUrl})
 
 ${devlogCount} • ${timeSpent} • ${followers}
+
     ${projectDesc}
 ---
 # Devlogs
