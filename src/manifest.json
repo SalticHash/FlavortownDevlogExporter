@@ -4,6 +4,8 @@
     "version": "1.0",
 
     "description": "Export Flavortown project devlogs.",
+    
+    "permissions": ["downloads"],
 
     "icons": {
         "48": "icons/icon-48.ico"
@@ -12,7 +14,12 @@
     "content_scripts": [
         {
             "matches": ["*://flavortown.hackclub.com/projects/*"],
-            "js": ["turndown.js", "devlog_exporter.js"]
+            "js": [
+                "module/turndown.js",
+                "module/jszip.js",
+                "module/FileSaver.js",
+                "devlog_exporter.js"
+            ]
         }
     ]
 }

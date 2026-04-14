@@ -33,11 +33,18 @@ function createDialog() {
         const md = generateMarkdown(json)
         const filename = json.project.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
         download(`${filename}_devlogs.md`, md)
+        dialog.close()
     })
     const exportJSONButton = createModalButton("Export JSON", () => {
         const json = generateJSON()
         const filename = json.project.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
         download(`${filename}_devlogs.json`, JSON.stringify(json))
+        dialog.close()
+    })
+    const exportZIPButton = createModalButton("Export ZIP", () => {
+        exportZIPButton.disabled = true
+        generateZIP(exportZIPButton)
+        dialog.close()
     })
     const closeButton = createModalButton("Close", () => dialog.close())
     const exitContainer = document.createElement("div");
@@ -45,6 +52,7 @@ function createDialog() {
     
     exitContainer.appendChild(exportJSONButton)
     exitContainer.appendChild(exportMarkdownButton)
+    exitContainer.appendChild(exportZIPButton)
     exitContainer.appendChild(closeButton)
     dialog.appendChild(title)
     dialog.appendChild(buttonContainer)
@@ -99,7 +107,7 @@ function generateJSON() {
         const attachments = []
         attachmentsData.forEach(attachment => {
             attachments.push({
-                type: attachment.nodeType,
+                type: attachment.tagName,
                 src: attachment.src
             })
         })
@@ -134,6 +142,60 @@ function generateJSON() {
     }
 }
 
+function getFilenameFromContentDisposition(s) {
+    if (!s) return null;
+
+    // Try filename* first (RFC 5987)
+    const filenameStarMatch = s.match(/filename\*\s*=\s*([^']*)''([^;]+)/i);
+    if (filenameStarMatch) return decodeURIComponent(filenameStarMatch[2]);
+    // Fallback to filename
+    const filenameMatch = s.match(/filename\s*=\s*"([^"]+)"/i);
+    if (filenameMatch) return filenameMatch[1];
+
+    return null;
+}
+
+async function generateZIP(exportZIPButton) {
+    const zip = new JSZip();
+
+    // Add text files
+    const json = generateJSON()
+
+    const addFetchFile = async (url, prefix="") => {
+        console.log(url)
+        const response = await fetch(url)
+        const contentDisposition = response.headers.get("content-disposition")
+        const filename = getFilenameFromContentDisposition(contentDisposition)
+            .replace(/\s/gi, '_')
+        const foreignBuffer = await response.arrayBuffer();
+
+        const clean = new Uint8Array(new Uint8Array(foreignBuffer));
+
+        const path = `${prefix}${filename}`
+        zip.file(path, clean);
+        return path;
+    }
+
+    const bannerPath = await addFetchFile(json.project.banner)
+    json.project.banner = bannerPath
+    for (const [idx, devlog] of json.devlogs.entries()) {
+        for (const attachment of devlog.attachments) {
+            const path = await addFetchFile(attachment.src, `attachments/devlog_${idx + 1}/`)
+            attachment.src = path
+        }
+    }
+
+    // Add info files
+    zip.file("devlogs.json", JSON.stringify(json));
+    const md = generateMarkdown(json)
+    zip.file("devlogs.md", md);
+
+    // Generate and download ZIP
+    const content = await zip.generateAsync({ type: 'blob' });
+    const filename = json.project.name.replace(/[^a-z0-9]/gi, '_');
+    saveAs(content, `${filename}_devlogs.zip`);
+    exportZIPButton.disabled = false
+}
 function generateMarkdown(json) {
     const proj = json.project
     const author = proj.author
@@ -152,15 +214,16 @@ ${proj.stats.devlog_count} • ${proj.stats.time_spend} • ${proj.stats.followe
 ${devlogs.map(devlog => `
 ${devlog.time} • ${devlog.duration}
 
----
-
 ${devlog.body}
 
 ---
 
-${devlog.attachments.map(attachment => `![${attachment.type} attachment](${attachment.src})`)}
----
-`)}
+${devlog.attachments.map(attachment => 
+    (attachment.type == "IMG") ? `![IMAGE attachment](${attachment.src})` :
+    `<video src="${attachment.src}" controls></video>`
+).join("\n")}
+
+`).join("\n\n---")}
 `
 }
 
