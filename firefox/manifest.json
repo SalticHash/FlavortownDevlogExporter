@@ -12,7 +12,7 @@
     "content_scripts": [
         {
             "matches": ["*://flavortown.hackclub.com/projects/*"],
-            "js": ["devlog_exporter.js"]
+            "js": ["turndown.js", "devlog_exporter.js"]
         }
     ]
 }
