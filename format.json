@@ -10,6 +10,7 @@
             "flavortownUrl": "url"
         },
         "description": "string",
+        "aiDeclaration": "string",
         "stats": {
             "devlog_count": "X devlogs",
             "time_spend": "Xh Xm Xs",
@@ -23,10 +24,27 @@
             "duration": "Xh Xm logged",
             "attachments": [
                 {
-                    "type": " 'img' | 'video' ",
+                    "type": " 'IMG' | 'VIDEO' ",
                     "src": "url | path"
                 }
             ]
         }
-    ]
+    ],
+    "ships": [
+        {
+            "body": "string",
+            "time": "about X Y ago",
+            "duration": "string",
+            "cookies": "🍪 X",
+            "multiplier": "X cookies/hr"
+        }
+    ],
+    "well_cooked": {
+        "author": {
+            "username": "string",
+            "flavortownUrl": "url"
+        },
+        "time": "about X Y ago",
+        "body": "string"
+    } // Can also be false if not well cooked
 }

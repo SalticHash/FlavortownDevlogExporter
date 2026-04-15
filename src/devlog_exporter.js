@@ -96,43 +96,83 @@ if (showCardActions && !document.getElementById("export_button_id")) {
 function generateJSON() {
     const projectUrl = location.href
     const projectBanner = document.querySelector(".project-card__banner-image").src
-    const projectName = document.querySelector(".project-show-card__title-text").textContent
+    const projectName = document.querySelector(".project-show-card__title-text").textContent.trim()
     const projectAuthorElement = document.querySelector(".project-show-card__byline > a")
-    const projectAuthor = projectAuthorElement.textContent
+    const projectAuthor = projectAuthorElement.textContent.trim()
     const projectAuthorUrl = `https://flavortown.hackclub.com${projectAuthorElement.href}`
 
     const projectStats = document.querySelector(".project-show-card__stats").children
     const [devlogCount, timeSpent, followers] =
         Array.from(projectStats).map(v => v.textContent.trim())
 
-    const projectDesc = document.querySelector(".project-show-card__description > p").textContent
+    const fullDesc = document.querySelector(".project-show-card__description-full")
+    const projectDesc = fullDesc ? fullDesc.textContent.trim()
+        : document.querySelector(".project-show-card__description").textContent.trim()
+    const aiDeclaration = document.querySelector(".project-show-card__ai-declaration > div > p").textContent.trim()
     const projectRepository = document.querySelector(".project-show-card__actions > a").href
 
-    const devlogsData = document.querySelectorAll(".post__content")
+    const postData = document.querySelectorAll(".post")
     const devlogs = []
+    const ships = []
+    let well_cooked = false
     const turndownService = new TurndownService()
-    devlogsData.forEach(devlog => {
-        const devlogBodyData = devlog.querySelector(".post__body")
-
-        const devlogBodyMarkdown = turndownService.turndown(devlogBodyData)
-
-        const devlogTime = devlog.querySelector(".post__time").textContent
-        const devlogDuration = devlog.querySelector(".post__duration").textContent
-        const attachmentsData = devlog.querySelectorAll(".post__attachment")
-        const attachments = []
-        attachmentsData.forEach(attachment => {
-            attachments.push({
-                type: attachment.tagName,
-                src: attachment.src
+    postData.forEach(post => {
+        if (post.classList.contains("post--devlog")) {
+            const devlog = post.querySelector(".post__content")
+            const devlogBodyData = devlog.querySelector(".post__body")
+    
+            const devlogBodyMarkdown = turndownService.turndown(devlogBodyData)
+    
+            const devlogTime = devlog.querySelector(".post__time").textContent
+            const devlogDuration = devlog.querySelector(".post__duration").textContent
+            const attachmentsData = devlog.querySelectorAll(".post__attachment")
+            const attachments = []
+            attachmentsData.forEach(attachment => {
+                attachments.push({
+                    type: attachment.tagName,
+                    src: attachment.src
+                })
             })
-        })
+    
+            devlogs.push({
+                body: devlogBodyMarkdown,
+                time: devlogTime,
+                duration: devlogDuration,
+                attachments: attachments
+            })
+        }
+        if (post.classList.contains("post--ship")) {
+            const ship = post.querySelector(".post__content")
+            const shipBody = ship.querySelector(".post__body").textContent
+            const shipTime = ship.querySelector(".post__time").textContent
+            const [shipDuration, shipCookies, shipMultiplier] =
+                Array.from(ship.querySelectorAll(".post__payout-value"))
+                .map(node => node.textContent)
 
-        devlogs.push({
-            body: devlogBodyMarkdown,
-            time: devlogTime,
-            duration: devlogDuration,
-            attachments: attachments
-        })
+            ships.push({
+                body: shipBody,
+                time: shipTime,
+                duration: shipDuration,
+                cookies: shipCookies,
+                multiplier: shipMultiplier
+            })
+        }
+        if (post.classList.contains("post--fire")) {
+            const content = post.querySelector(".post__content")
+            const authorElem = content.querySelector(".post__author > a")
+            const time = content.querySelector(".post__time").textContent
+            const author = authorElem.textContent
+            const authorUrl = `https://flavortown.hackclub.com${authorElem.href}`
+            const body = content.querySelector(".post__body").textContent
+            well_cooked = {
+                author: {
+                    username: author,
+                    flavortownUrl: authorUrl
+                },
+                time: time,
+                body: body
+            }
+        }
     })
 
 
@@ -147,13 +187,16 @@ function generateJSON() {
                 flavortownUrl: projectAuthorUrl
             },
             description: projectDesc,
+            aiDeclaration: aiDeclaration,
             stats: {
                 devlog_count: devlogCount,
                 time_spend: timeSpent,
                 followers: followers
             },
         },
-        devlogs: devlogs
+        devlogs: devlogs,
+        ships: ships,
+        well_cooked: well_cooked
     }
 }
 
@@ -215,6 +258,9 @@ function generateMarkdown(json) {
     const proj = json.project
     const author = proj.author
     const devlogs = json.devlogs
+    const ships = json.ships
+    const well_cooked = json.well_cooked
+    const well_cooked_author = well_cooked.author
     return `
 ![${proj.name} banner](${proj.banner})
 # [${proj.name}](${proj.flavortownUrl}) [(Repository)](${proj.repository})
@@ -222,8 +268,25 @@ Created by: [${author.username}](${author.flavortownUrl})
 
 ${proj.stats.devlog_count} • ${proj.stats.time_spend} • ${proj.stats.followers}
 
-    ${proj.description}
 ---
+
+${proj.description}
+
+${(proj.aiDeclaration.length > 0) ? `
+🤖 This project uses AI
+
+    ${proj.aiDeclaration}
+` : ""
+}
+
+---
+${well_cooked ?
+`# Well Cooked!
+${well_cooked.time} • [${well_cooked_author.username}](${well_cooked_author.flavortownUrl})
+${well_cooked.body}
+
+---` : ""}
+
 # Devlogs
 
 ${devlogs.map(devlog => `
@@ -239,6 +302,16 @@ ${devlog.attachments.map(attachment =>
 ).join("\n")}
 
 `).join("\n\n---")}
+
+# Ships
+${ships.map(ship => `
+${ship.time}
+
+Hours: ${ship.duration} • Cookies: ${ship.cookies} • Mutliplier: ${ship.multiplier}
+
+${ship.body}
+`).join("\n\n---")}
+
 `
 }
 
