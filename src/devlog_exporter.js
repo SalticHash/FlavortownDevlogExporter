@@ -85,8 +85,13 @@ function createExportButton(showDialog) {
     return exportButton
 }
 
-const showCardActions = document.querySelector(".project-show-card__actions")
-if (showCardActions && !document.getElementById("export_button_id")) {
+let showCardActions = document.querySelector(".project-show-card__actions")
+if (!showCardActions) {
+    showCardActions = document.createElement("div")
+    showCardActions.className = ".project-show-card__actions"
+    document.querySelector(".project-show-card__content").appendChild(showCardActions)
+}
+if (!document.getElementById("export_button_id")) {
     const dialog = createDialog()
     const exportButton = createExportButton(() => dialog.showModal())
     showCardActions.appendChild(exportButton)
@@ -105,17 +110,18 @@ function generateJSON() {
     const [devlogCount, timeSpent, followers] =
         Array.from(projectStats).map(v => v.textContent.trim())
 
+    const turndownService = new TurndownService()
+
     const fullDesc = document.querySelector(".project-show-card__description-full")
-    const projectDesc = fullDesc ? fullDesc.textContent.trim()
-        : document.querySelector(".project-show-card__description").textContent.trim()
-    const aiDeclaration = document.querySelector(".project-show-card__ai-declaration > div > p").textContent.trim()
-    const projectRepository = document.querySelector(".project-show-card__actions > a").href
+    const projectDesc = fullDesc ? fullDesc : document.querySelector(".project-show-card__description")
+    const projectDescMarkdown = turndownService.turndown(projectDesc)
+    const aiDeclaration = document.querySelector(".project-show-card__ai-declaration > div > p")?.textContent?.trim() ?? ""
+    const projectRepository = document.querySelector(".project-show-card__actions > a")?.href ?? ""
 
     const postData = document.querySelectorAll(".post")
     const devlogs = []
     const ships = []
     let well_cooked = false
-    const turndownService = new TurndownService()
     postData.forEach(post => {
         if (post.classList.contains("post--devlog")) {
             const devlog = post.querySelector(".post__content")
@@ -123,8 +129,8 @@ function generateJSON() {
     
             const devlogBodyMarkdown = turndownService.turndown(devlogBodyData)
     
-            const devlogTime = devlog.querySelector(".post__time").textContent
-            const devlogDuration = devlog.querySelector(".post__duration").textContent
+            const devlogTime = devlog.querySelector(".post__time")?.textContent ?? "No time"
+            const devlogDuration = devlog.querySelector(".post__duration")?.textContent ?? "0h 0m logged"
             const attachmentsData = devlog.querySelectorAll(".post__attachment")
             const attachments = []
             attachmentsData.forEach(attachment => {
@@ -186,7 +192,7 @@ function generateJSON() {
                 username: projectAuthor,
                 flavortownUrl: projectAuthorUrl
             },
-            description: projectDesc,
+            description: projectDescMarkdown,
             aiDeclaration: aiDeclaration,
             stats: {
                 devlog_count: devlogCount,
@@ -289,7 +295,7 @@ ${well_cooked.body}
 
 # Devlogs
 
-${devlogs.map(devlog => `
+${(devlogs.length > 0) ? devlogs.map(devlog => `
 ${devlog.time} • ${devlog.duration}
 
 ${devlog.body}
@@ -301,16 +307,17 @@ ${devlog.attachments.map(attachment =>
     `<video src="${attachment.src}" controls></video>`
 ).join("\n")}
 
-`).join("\n\n---")}
+`).join("\n\n---") : "No devlogs"}
 
 # Ships
-${ships.map(ship => `
+
+${(ships.length > 0) ? ships.map(ship => `
 ${ship.time}
 
 Hours: ${ship.duration} • Cookies: ${ship.cookies} • Mutliplier: ${ship.multiplier}
 
 ${ship.body}
-`).join("\n\n---")}
+`).join("\n\n---") : "No ships"}
 
 `
 }

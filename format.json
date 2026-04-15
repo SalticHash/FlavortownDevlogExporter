@@ -9,7 +9,7 @@
             "username": "string",
             "flavortownUrl": "url"
         },
-        "description": "string",
+        "description": "markdown",
         "aiDeclaration": "string",
         "stats": {
             "devlog_count": "X devlogs",
