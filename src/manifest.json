@@ -12,7 +12,10 @@
     ],
 
     "icons": {
-        "48": "icons/icon-48.ico"
+        "32": "icons/icon-32.png",
+        "48": "icons/icon-48.png",
+        "64": "icons/icon-64.png",
+        "128": "icons/icon-128.png"
     },
 
     "content_scripts": [
@@ -38,5 +41,17 @@
                 "path": "rules.json"
             }
         ]
+    },
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "@FTExport-3a78fda4-1c39-486d-ae0e-eeec484ff1c8",
+            "strict_min_version": "142.0",
+            "data_collection_permissions": {
+                "required": ["none"]
+            }
+        },
+        "gecko_android": {
+            "strict_min_version": "142.0"
+        }
     }
 }
