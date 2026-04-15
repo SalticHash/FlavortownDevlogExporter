@@ -14,7 +14,7 @@ function createDialog() {
     const title = document.createElement("h3")
     title.className = "modal__title"
     title.style = "border-radius: calc(var(--border-radius)*.6);"
-    title.textContent = "Export Devlogs"
+    title.textContent = "Devlog Export"
     const createModalButton = (content, onclick, style = null) => {
         const button = document.createElement("button")
         if (style) button.style = style
@@ -26,7 +26,15 @@ function createDialog() {
     }
     const buttonContainer = document.createElement("div")
     buttonContainer.style = "display: flex; flex-direction: column; grid-gap: 10px;"
-    buttonContainer.textContent = "Export all your devlogs!"
+    buttonContainer.innerHTML = `
+        <h2>Export all your devlogs!</h2>
+        <p>With this tool you can export your devlogs to use wherever you want, in a blog, in your README or just to make an archive.</p>
+        <ul>
+            <li style="margin-left: 32px;">Export Markdown & Export JSON export a single file with the devlog data, these use Flavortown links.</li>
+            <li style="margin-left: 32px;">Export ZIP includes JSON and Markdown, it also downloads all attachments into the attachments/devlog-number folders.</li>
+            <li style="margin-left: 32px;">If you want to know what the formating for the JSON is check <a href="https://github.com/SalticHash/FlavortownDevlogExporter/blob/main/format.json">here</a>.</li>
+        </ul>
+    `
     const bigButtonStyle = "font-size: 1.5rem;"
     const exportMarkdownButton = createModalButton("Export Markdown", () => {
         const json = generateJSON()
@@ -47,8 +55,10 @@ function createDialog() {
         dialog.close()
     })
     const closeButton = createModalButton("Close", () => dialog.close())
+    closeButton.style = "margin-left: auto;"
     const exitContainer = document.createElement("div");
     exitContainer.className = "modal__actions";
+    exitContainer.style = "gap: 0.5em;"
     
     exitContainer.appendChild(exportJSONButton)
     exitContainer.appendChild(exportMarkdownButton)
