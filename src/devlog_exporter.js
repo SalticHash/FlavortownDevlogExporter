@@ -29,6 +29,15 @@ function createDialog() {
         button.textContent = content
         return button
     }
+
+    const progressBar = document.createElement("div")
+    progressBar.className = "achievements__progress-bar"
+    progressBar.style = "display: none"
+    const progressFill = document.createElement("div")
+    progressFill.className = "achievements__progress-fill"
+    progressFill.style = "width: 0.0%"
+    progressBar.appendChild(progressFill)
+
     const buttonContainer = document.createElement("div")
     buttonContainer.style = "display: flex; flex-direction: column; grid-gap: 10px;"
     buttonContainer.innerHTML = `
@@ -40,7 +49,8 @@ function createDialog() {
             <li style="margin-left: 32px;">If you want to know what the formating for the JSON is check <a href="https://github.com/SalticHash/FlavortownDevlogExporter/blob/main/format.json">here</a>.</li>
         </ul>
     `
-    const bigButtonStyle = "font-size: 1.5rem;"
+    buttonContainer.appendChild(progressBar)
+
     const exportMarkdownButton = createModalButton("Export Markdown", () => {
         const json = generateJSON()
         const md = generateMarkdown(json)
@@ -54,16 +64,24 @@ function createDialog() {
         download(`${filename}_devlogs.json`, JSON.stringify(json))
         dialog.close()
     })
-    const exportZIPButton = createModalButton("Export ZIP", () => {
+    const exportZIPButton = createModalButton("Export ZIP", async () => {
+        if (exportZIPButton.disabled) return
+
+        progressBar.style = "display: block"
         exportZIPButton.disabled = true
-        generateZIP(exportZIPButton)
+        await generateZIP(progressFill)
         dialog.close()
+        progressBar.style = "display: none"
+        progressFill.style = "width: 0.0%"
+        exportZIPButton.disabled = false
+
     })
     const closeButton = createModalButton("Close", () => dialog.close())
     closeButton.style = "margin-left: auto;"
     const exitContainer = document.createElement("div");
     exitContainer.className = "modal__actions";
     exitContainer.style = "gap: 0.5em;"
+
     
     exitContainer.appendChild(exportJSONButton)
     exitContainer.appendChild(exportMarkdownButton)
@@ -94,8 +112,17 @@ if (!showCardActions) {
 if (!document.getElementById("export_button_id")) {
     const dialog = createDialog()
     const exportButton = createExportButton(() => dialog.showModal())
+    const style = document.createElement("style")
+    style.innerHTML = `
+    .modal__actions-close:disabled {
+        opacity: 0.6;
+        filter: brightness(1.0) !important;
+        cursor: unset;
+    }
+    `
     showCardActions.appendChild(exportButton)
     showCardActions.appendChild(dialog)
+    dialog.appendChild(style)
 }
 
 function generateJSON() {
@@ -206,6 +233,16 @@ function generateJSON() {
     }
 }
 
+function generateRandomString(length) {
+    const characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let result = "";
+    for (let i = 0; i < length; i++) {
+        const randomIndex = Math.floor(Math.random() * characters.length);
+        result += characters.charAt(randomIndex);
+    }
+    return result;
+}
+
 function getFilenameFromContentDisposition(s) {
     if (!s) return null;
 
@@ -216,17 +253,16 @@ function getFilenameFromContentDisposition(s) {
     const filenameMatch = s.match(/filename\s*=\s*"([^"]+)"/i);
     if (filenameMatch) return filenameMatch[1];
 
-    return null;
+    return generateRandomString(16);
 }
 
-async function generateZIP(exportZIPButton) {
+async function generateZIP(progressFill) {
     const zip = new JSZip();
 
     // Add text files
     const json = generateJSON()
 
     const addFetchFile = async (url, prefix="") => {
-        console.log(url)
         const response = await FTFetch(url)
         const contentDisposition = response.headers.get("content-disposition")
         const filename = getFilenameFromContentDisposition(contentDisposition)
@@ -240,12 +276,19 @@ async function generateZIP(exportZIPButton) {
         return path;
     }
 
+    let attachmentsTotal = 0
+    let attachments = 0
+    for (const devlog of json.devlogs) attachmentsTotal += devlog.attachments?.length ?? 0;
+
     const bannerPath = await addFetchFile(json.project.banner)
     json.project.banner = bannerPath
     for (const [idx, devlog] of json.devlogs.entries()) {
         for (const attachment of devlog.attachments) {
             const path = await addFetchFile(attachment.src, `attachments/devlog_${idx + 1}/`)
             attachment.src = path
+            attachments += 1
+            progressFill.style = `width: ${(attachments == 0) ? 0 : (attachments / attachmentsTotal * 100.0)}%`
+            console.log("Processed attachment")
         }
     }
 
@@ -258,7 +301,6 @@ async function generateZIP(exportZIPButton) {
     const content = await zip.generateAsync({ type: 'blob' });
     const filename = json.project.name.replace(/[^a-z0-9]/gi, '_');
     saveAs(content, `${filename}_devlogs.zip`);
-    exportZIPButton.disabled = false
 }
 function generateMarkdown(json) {
     const proj = json.project
